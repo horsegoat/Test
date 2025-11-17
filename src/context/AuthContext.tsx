@@ -22,17 +22,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-let supabase: any = null;
-
-const getSupabaseClient = () => {
-  if (!supabase) {
-    supabase = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY
-    );
-  }
-  return supabase;
-};
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL || '',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<any>(null);
@@ -42,8 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const client = getSupabaseClient();
-        const { data } = await client.auth.getSession();
+        const { data } = await supabase.auth.getSession();
         if (data.session?.user) {
           setUser(data.session.user);
           await fetchProfile(data.session.user.id);
@@ -57,9 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     checkAuth();
 
-    const client = getSupabaseClient();
-    const { data: authListener } = client.auth.onAuthStateChange(
-      async (event: any, session: any) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
         if (session?.user) {
           setUser(session.user);
           await fetchProfile(session.user.id);
@@ -77,8 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
-      const client = getSupabaseClient();
-      const { data, error } = await client
+      const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
@@ -97,8 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      const client = getSupabaseClient();
-      await client.auth.signOut();
+      await supabase.auth.signOut();
       setUser(null);
       setProfile(null);
     } catch (error) {
